@@ -29,8 +29,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubunt
 .status-dot.ok{background:var(--success)}
 .status-dot.missing{background:var(--danger)}
 .api-status{font-size:.8rem;color:var(--gray);white-space:nowrap}
-.cors-toggle{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--gray);cursor:pointer;white-space:nowrap}
-.cors-toggle input{cursor:pointer;width:16px;height:16px;accent-color:var(--primary)}
 /* Main layout */
 .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;padding:32px 0}
 @media(max-width:860px){.main-grid{grid-template-columns:1fr}}
@@ -150,32 +148,38 @@ body{background:var(--white)!important}
 .cv-header-info .cv-contact{font-size:10.5pt!important}
 @page{margin:2cm}
 }
-/* File protocol warning */
-.file-warning{display:none;background:#fef3cd;border-bottom:2px solid #f59e0b;padding:14px 20px;font-size:.85rem;color:#92400e}
-.file-warning.show{display:block}
-.file-warning .container{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.file-warning strong{margin-right:4px}
-.file-warning code{background:rgba(0,0,0,.06);padding:2px 8px;border-radius:4px;font-size:.8rem;white-space:nowrap}
-.file-warning .btn-copy-cmd{background:#92400e;color:#fff;border:none;padding:4px 12px;border-radius:4px;font-size:.8rem;cursor:pointer;font-weight:600;font-family:inherit}
-.file-warning .btn-copy-cmd:hover{opacity:.9}
-.file-warning .dismiss-btn{background:transparent;border:none;color:#92400e;cursor:pointer;font-size:1.2rem;padding:0 4px;margin-left:auto;opacity:.6}
-.file-warning .dismiss-btn:hover{opacity:1}
+/* File protocol overlay */
+.file-overlay{display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px}
+.file-overlay.show{display:flex}
+.file-overlay-box{background:#fff;border-radius:16px;padding:36px 32px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;animation:fadeIn .3s ease}
+.file-overlay-box .icon{font-size:3rem;margin-bottom:8px}
+.file-overlay-box h2{font-size:1.2rem;color:var(--primary);margin-bottom:6px}
+.file-overlay-box p{font-size:.88rem;color:var(--gray);line-height:1.6;margin-bottom:16px}
+.file-overlay-box .cmd-box{background:#1a1a2e;color:#e4e4e4;padding:12px 16px;border-radius:8px;font-family:monospace;font-size:.82rem;text-align:left;margin-bottom:12px;word-break:break-all;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.file-overlay-box .cmd-box code{flex:1}
+.file-overlay-box .cmd-box button{background:#3b82f6;color:#fff;border:none;padding:4px 12px;border-radius:4px;font-size:.75rem;cursor:pointer;font-weight:600;font-family:inherit;white-space:nowrap}
+.file-overlay-box .cmd-box button:hover{background:#2563eb}
+.file-overlay-box .alt-cmds{font-size:.8rem;color:var(--gray);margin-bottom:16px;line-height:1.8}
+.file-overlay-box .alt-cmds code{background:var(--bg);padding:2px 6px;border-radius:3px;font-size:.78rem}
+.file-overlay-box .btn-primary{width:100%;padding:12px}
 </style>
 </head>
 <body>
 
-<div class="file-warning" id="fileWarning">
-  <div class="container">
-    <span>&#9888;&#65039;</span>
-    <div>
-      <strong>Opening from file://</strong>
-      Browsers block API calls when a page is opened directly as a file.
-      Run this command in the <code>index.html</code> folder to start a local server:
-      <code style="margin-left:4px">python -m http.server 8000</code>
-      <button class="btn-copy-cmd" onclick="copyServerCmd()">Copy command</button>
-      <br><span style="font-size:.78rem">Then open <strong>http://localhost:8000</strong> in your browser.</span>
+<div class="file-overlay" id="fileOverlay">
+  <div class="file-overlay-box">
+    <div class="icon">&#128274;</div>
+    <h2>Browser Security Restriction</h2>
+    <p>This app needs to be served from a local web server. Opening <code>index.html</code> directly as a file <strong>(file://)</strong> blocks all API calls due to browser CORS policy.</p>
+    <div class="cmd-box">
+      <code>python -m http.server 8000</code>
+      <button onclick="copyCmd('python -m http.server 8000')">Copy</button>
     </div>
-    <button class="dismiss-btn" onclick="document.getElementById('fileWarning').classList.remove('show')">&times;</button>
+    <div class="alt-cmds">
+      <strong>Node.js:</strong> <code>npx http-server -p 8000</code><br>
+      <strong>VS Code:</strong> Install Live Server extension &rarr; right-click index.html &rarr; Open with Live Server
+    </div>
+    <button class="btn btn-primary" onclick="checkServer()">I'm already running a server &rarr;</button>
   </div>
 </div>
 
@@ -197,9 +201,6 @@ body{background:var(--white)!important}
     <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
     <span class="status-dot missing" id="apiStatusDot"></span>
     <span class="api-status" id="apiStatusText">Not set</span>
-    <label class="cors-toggle">
-      <input type="checkbox" id="corsProxyToggle"> Use CORS proxy
-    </label>
   </div>
 </section>
 
@@ -468,41 +469,17 @@ function getApiKey() { return apiKeyInput.value.trim(); }
 // --- File protocol detection ---
 (function() {
   if (location.protocol === 'file:') {
-    document.getElementById('fileWarning').classList.add('show');
+    document.getElementById('fileOverlay').classList.add('show');
   }
 })();
-function copyServerCmd() {
-  var cmd = 'python -m http.server 8000';
-  navigator.clipboard.writeText(cmd).then(function() {
-    var btn = document.querySelector('.btn-copy-cmd');
-    var orig = btn.textContent;
-    btn.textContent = 'Copied!';
-    setTimeout(function() { btn.textContent = orig; }, 2000);
-  }).catch(function() {});
+function copyCmd(cmd) {
+  navigator.clipboard.writeText(cmd).then(function() { showToast('Command copied!'); });
 }
-
-// --- CORS Proxy ---
-function apiUrl() {
-  var direct = 'https://api.anthropic.com/v1/messages';
-  var proxy = document.getElementById('corsProxyToggle').checked;
-  if (proxy) {
-    return 'https://corsproxy.io/?' + encodeURIComponent(direct);
-  }
-  return direct;
+function checkServer() {
+  fetch('http://localhost:8000/index.html', { mode: 'no-cors' })
+    .then(function() { window.location = 'http://localhost:8000/index.html'; })
+    .catch(function() { showToast('No server detected at localhost:8000. Run the command above first.'); });
 }
-
-(function() {
-  var cb = document.getElementById('corsProxyToggle');
-  var saved = localStorage.getItem('cors_proxy_enabled');
-  if (saved === 'true') cb.checked = true;
-  if (location.protocol === 'file:') {
-    cb.checked = true;
-    localStorage.setItem('cors_proxy_enabled', 'true');
-  }
-  cb.addEventListener('change', function() {
-    localStorage.setItem('cors_proxy_enabled', cb.checked ? 'true' : '');
-  });
-})();
 
 // --- Profile Picture ---
 const profilePicInput = document.getElementById('profilePicInput');
@@ -715,7 +692,7 @@ async function parseOldCV() {
   showLoading('Claude is extracting your information...');
 
   try {
-    var response = await fetch(apiUrl(), {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -764,7 +741,7 @@ async function regenerateFromOldCV() {
 
   try {
     // Step 1: Parse old CV → fill form
-    var parseResponse = await fetch(apiUrl(), {
+    var parseResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -795,7 +772,7 @@ async function regenerateFromOldCV() {
     lastFormData = data;
     var prompt = buildPrompt(data, selectedTone, oldCvContent);
 
-    var genResponse = await fetch(apiUrl(), {
+    var genResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
@@ -1002,7 +979,7 @@ async function generateCV() {
 
   try {
     var prompt = buildPrompt(data, selectedTone, oldCvContent);
-    var response = await fetch(apiUrl(), {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
