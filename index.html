@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CV Builder — Powered by AI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#1a3c6e;--primary-light:#2a5a9e;--primary-dark:#0f2a4f;--bg:#f4f6f9;--white:#fff;--gray:#6b7280;--gray-light:#e5e7eb;--gray-dark:#374151;--danger:#dc2626;--success:#16a34a;--radius:12px;--shadow:0 4px 24px rgba(0,0,0,.08);--transition:all .3s ease}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:var(--bg);color:var(--gray-dark);line-height:1.6;min-height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:0 20px}
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:var(--white);padding:40px 0 32px;text-align:center}
+.hero-inner{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.logo-placeholder{width:56px;height:56px;background:rgba(255,255,255,.15);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;letter-spacing:-1px;border:2px dashed rgba(255,255,255,.4)}
+.hero h1{font-size:clamp(1.4rem,4vw,2rem);font-weight:700;letter-spacing:-.5px}
+.hero p{font-size:.95rem;opacity:.85;margin-top:4px}
+/* API Key Bar */
+.api-bar{background:var(--white);border-bottom:1px solid var(--gray-light);padding:12px 0;position:sticky;top:0;z-index:100}
+.api-bar .container{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.api-bar label{font-size:.85rem;font-weight:600;color:var(--primary);white-space:nowrap}
+.api-bar input{flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--gray-light);border-radius:8px;font-size:.9rem;outline:none;transition:var(--transition)}
+.api-bar input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,60,110,.12)}
+.status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+.status-dot.ok{background:var(--success)}
+.status-dot.missing{background:var(--danger)}
+.api-status{font-size:.8rem;color:var(--gray);white-space:nowrap}
+.cors-toggle{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--gray);cursor:pointer;white-space:nowrap}
+.cors-toggle input{cursor:pointer;width:16px;height:16px;accent-color:var(--primary)}
+/* Main layout */
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;padding:32px 0}
+@media(max-width:860px){.main-grid{grid-template-columns:1fr}}
+/* Step Indicator */
+.step-indicator{text-align:center;margin-bottom:20px}
+.step-indicator .step-label{font-size:.85rem;font-weight:600;color:var(--primary);margin-bottom:8px}
+.progress-bar{height:6px;background:var(--gray-light);border-radius:3px;overflow:hidden;max-width:500px;margin:0 auto}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-light));border-radius:3px;transition:width .5s ease;width:0}
+.step-dots{display:flex;justify-content:center;gap:8px;margin-top:10px}
+.step-dot{width:10px;height:10px;border-radius:50%;background:var(--gray-light);transition:var(--transition);cursor:default}
+.step-dot.active{background:var(--primary);transform:scale(1.2)}
+.step-dot.done{background:var(--primary-light);opacity:.5}
+/* Form Card */
+.form-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px;position:relative}
+.form-card h2{font-size:1.15rem;color:var(--primary);margin-bottom:4px}
+.form-card .step-sub{font-size:.85rem;color:var(--gray);margin-bottom:20px}
+.form-step{display:none;animation:fadeIn .3s ease}
+.form-step.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.85rem;font-weight:600;color:var(--gray-dark);margin-bottom:4px}
+.form-group label .required{color:var(--danger);margin-left:2px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;border:1px solid var(--gray-light);border-radius:8px;font-size:.9rem;font-family:inherit;outline:none;transition:var(--transition);background:var(--white)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,60,110,.12)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-group .char-count{text-align:right;font-size:.75rem;color:var(--gray);margin-top:2px}
+.form-group .error-msg{font-size:.8rem;color:var(--danger);margin-top:2px;display:none}
+.form-group.invalid input,.form-group.invalid textarea,.form-group.invalid .file-drop-zone{border-color:var(--danger)}
+.form-group.invalid .error-msg{display:block}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.form-row{grid-template-columns:1fr}}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 22px;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;transition:var(--transition);text-decoration:none;font-family:inherit}
+.btn-primary{background:var(--primary);color:var(--white)}
+.btn-primary:hover{background:var(--primary-light);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-outline{background:transparent;color:var(--primary);border:2px solid var(--primary)}
+.btn-outline:hover{background:var(--primary);color:var(--white)}
+.btn-ghost{background:transparent;color:var(--gray);border:1px solid var(--gray-light)}
+.btn-ghost:hover{background:var(--bg)}
+.btn-success{background:var(--success);color:var(--white)}
+.btn-success:hover{opacity:.9}
+.btn-danger{background:var(--danger);color:var(--white)}
+.btn-danger:hover{opacity:.9}
+.btn-sm{padding:6px 14px;font-size:.8rem}
+.form-nav{display:flex;justify-content:space-between;margin-top:24px;gap:12px}
+.form-nav .btn{min-width:120px}
+/* Profile Picture */
+.profile-pic-wrap{display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg);border-radius:var(--radius)}
+.profile-pic-preview{width:80px;height:80px;border-radius:50%;overflow:hidden;background:var(--gray-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--gray);border:3px solid var(--white);box-shadow:0 2px 8px rgba(0,0,0,.1);position:relative}
+.profile-pic-preview img{width:100%;height:100%;object-fit:cover;display:none}
+.profile-pic-preview img.loaded{display:block}
+.profile-pic-preview .placeholder{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.profile-pic-preview.has-img .placeholder{display:none}
+.profile-pic-actions{display:flex;flex-direction:column;gap:6px}
+.profile-pic-actions .btn{justify-content:center}
+.profile-pic-actions .hint{font-size:.75rem;color:var(--gray)}
+/* File Drop Zone */
+.file-drop-zone{border:2px dashed var(--gray-light);border-radius:var(--radius);padding:24px;text-align:center;cursor:pointer;transition:var(--transition);background:var(--bg);position:relative}
+.file-drop-zone:hover,.file-drop-zone.dragover{border-color:var(--primary);background:rgba(26,60,110,.04)}
+.file-drop-zone .icon{font-size:2rem;margin-bottom:8px;opacity:.4}
+.file-drop-zone p{font-size:.85rem;color:var(--gray);margin-bottom:2px}
+.file-drop-zone .hint{font-size:.75rem;color:var(--gray);opacity:.7}
+.file-drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.file-status{display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:8px;margin-top:8px}
+.file-status.show{display:flex}
+.file-status .file-icon{font-size:1.2rem}
+.file-status .file-name{flex:1;font-size:.85rem;font-weight:500;color:var(--gray-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-status .file-size{font-size:.75rem;color:var(--gray)}
+/* Tone Toggle */
+.tone-toggle{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.tone-toggle label{font-size:.85rem;font-weight:600;color:var(--gray-dark)}
+.tone-options{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:3px}
+.tone-btn{padding:6px 16px;border:none;border-radius:6px;font-size:.8rem;font-weight:500;cursor:pointer;transition:var(--transition);background:transparent;color:var(--gray);font-family:inherit}
+.tone-btn.active{background:var(--white);color:var(--primary);box-shadow:0 2px 8px rgba(0,0,0,.08);font-weight:600}
+.tone-btn:hover:not(.active){color:var(--gray-dark)}
+/* CV Preview */
+.cv-panel{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px;position:sticky;top:80px}
+.cv-panel h2{font-size:1.15rem;color:var(--primary);margin-bottom:4px}
+.cv-panel .step-sub{font-size:.85rem;color:var(--gray);margin-bottom:16px}
+.cv-panel .empty-state{text-align:center;padding:48px 16px;color:var(--gray)}
+.cv-panel .empty-state .icon{font-size:3rem;margin-bottom:12px;opacity:.3}
+.cv-panel .empty-state p{font-size:.9rem}
+.cv-preview{display:none}
+.cv-preview.active{display:block}
+.cv-header{display:flex;align-items:center;gap:20px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--primary)}
+.cv-header-photo{width:90px;height:90px;border-radius:50%;overflow:hidden;background:var(--gray-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:var(--gray);border:3px solid var(--white);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.cv-header-photo img{width:100%;height:100%;object-fit:cover;display:none}
+.cv-header-photo img.loaded{display:block}
+.cv-header-photo .placeholder{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.cv-header-photo.has-img .placeholder{display:none}
+.cv-header-info{flex:1;min-width:0}
+.cv-header-info .cv-name{font-family:'Times New Roman',Times,serif;font-size:22pt;font-weight:700;color:#111;line-height:1.2}
+.cv-header-info .cv-contact{font-family:'Times New Roman',Times,serif;font-size:10pt;color:#444;margin-top:4px;line-height:1.5}
+.cv-content{font-family:'Times New Roman',Times,serif;font-size:11.5pt;line-height:1.5;color:#222;padding:0;white-space:pre-wrap;word-wrap:break-word}
+.cv-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+/* Loading */
+.loading-overlay{display:none;position:absolute;inset:0;background:rgba(255,255,255,.85);border-radius:var(--radius);z-index:10;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading-overlay.active{display:flex}
+.spinner{width:40px;height:40px;border:4px solid var(--gray-light);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay p{font-size:.9rem;color:var(--gray);font-weight:500}
+/* Error Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--danger);color:var(--white);padding:12px 24px;border-radius:8px;font-size:.9rem;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:1000;opacity:0;transition:opacity .3s ease;pointer-events:none}
+.toast.show{opacity:1}
+/* Print */
+@media print{
+body{background:var(--white)!important}
+.hero,.api-bar,.form-card,.cv-actions,.step-indicator,.tone-toggle{display:none!important}
+.main-grid{display:block!important;padding:0!important}
+.cv-panel{box-shadow:none!important;border-radius:0!important;padding:0!important;position:static!important}
+.cv-panel h2,.cv-panel .step-sub{display:none!important}
+.cv-content{font-size:12pt!important;color:#000!important}
+.cv-header{padding-bottom:12px!important;margin-bottom:16px!important}
+.cv-header-photo{width:100px!important;height:100px!important}
+.cv-header-info .cv-name{font-size:24pt!important}
+.cv-header-info .cv-contact{font-size:10.5pt!important}
+@page{margin:2cm}
+}
+/* File protocol warning */
+.file-warning{display:none;background:#fef3cd;border-bottom:2px solid #f59e0b;padding:14px 20px;font-size:.85rem;color:#92400e}
+.file-warning.show{display:block}
+.file-warning .container{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.file-warning strong{margin-right:4px}
+.file-warning code{background:rgba(0,0,0,.06);padding:2px 8px;border-radius:4px;font-size:.8rem;white-space:nowrap}
+.file-warning .btn-copy-cmd{background:#92400e;color:#fff;border:none;padding:4px 12px;border-radius:4px;font-size:.8rem;cursor:pointer;font-weight:600;font-family:inherit}
+.file-warning .btn-copy-cmd:hover{opacity:.9}
+.file-warning .dismiss-btn{background:transparent;border:none;color:#92400e;cursor:pointer;font-size:1.2rem;padding:0 4px;margin-left:auto;opacity:.6}
+.file-warning .dismiss-btn:hover{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="file-warning" id="fileWarning">
+  <div class="container">
+    <span>&#9888;&#65039;</span>
+    <div>
+      <strong>Opening from file://</strong>
+      Browsers block API calls when a page is opened directly as a file.
+      Run this command in the <code>index.html</code> folder to start a local server:
+      <code style="margin-left:4px">python -m http.server 8000</code>
+      <button class="btn-copy-cmd" onclick="copyServerCmd()">Copy command</button>
+      <br><span style="font-size:.78rem">Then open <strong>http://localhost:8000</strong> in your browser.</span>
+    </div>
+    <button class="dismiss-btn" onclick="document.getElementById('fileWarning').classList.remove('show')">&times;</button>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="logo-placeholder">CV</div>
+      <div>
+        <h1>CV Builder — Powered by AI</h1>
+        <p>Create a professional CV with the help of Claude AI</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="api-bar">
+  <div class="container">
+    <label for="apiKey">Claude API Key</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+    <span class="status-dot missing" id="apiStatusDot"></span>
+    <span class="api-status" id="apiStatusText">Not set</span>
+    <label class="cors-toggle">
+      <input type="checkbox" id="corsProxyToggle"> Use CORS proxy
+    </label>
+  </div>
+</section>
+
+<div class="container main-grid">
+  <!-- Left: Form -->
+  <div>
+    <div class="step-indicator">
+      <div class="step-label" id="stepLabel">Step 1 of 4 — Personal Info</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="step-dots">
+        <span class="step-dot active" data-step="1"></span>
+        <span class="step-dot" data-step="2"></span>
+        <span class="step-dot" data-step="3"></span>
+        <span class="step-dot" data-step="4"></span>
+      </div>
+    </div>
+
+    <div class="form-card" id="formCard">
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p id="loadingText">Claude is writing your CV...</p>
+      </div>
+
+      <!-- Step 1 -->
+      <div class="form-step active" data-step="1">
+        <h2>Personal Info</h2>
+        <p class="step-sub">Tell us about yourself</p>
+
+        <div class="profile-pic-wrap">
+          <div class="profile-pic-preview" id="profilePicPreview">
+            <span class="placeholder">&#128100;</span>
+            <img id="profilePicImg" alt="Profile photo">
+          </div>
+          <div class="profile-pic-actions">
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('profilePicInput').click()">Upload Photo</button>
+            <button class="btn btn-ghost btn-sm" id="removePicBtn" style="display:none" onclick="removeProfilePic()">Remove</button>
+            <span class="hint">JPG or PNG, square crop recommended</span>
+          </div>
+          <input type="file" id="profilePicInput" accept="image/*" hidden>
+        </div>
+
+        <div class="form-group">
+          <label>Full Name <span class="required">*</span></label>
+          <input type="text" id="fullName" placeholder="e.g. Maria Santos">
+          <div class="error-msg">Please enter your full name</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email <span class="required">*</span></label>
+            <input type="email" id="email" placeholder="maria@example.com">
+            <div class="error-msg">Please enter a valid email</div>
+          </div>
+          <div class="form-group">
+            <label>Phone <span class="required">*</span></label>
+            <input type="tel" id="phone" placeholder="+1 555-0000">
+            <div class="error-msg">Please enter your phone number</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>City <span class="required">*</span></label>
+            <input type="text" id="city" placeholder="e.g. New York">
+            <div class="error-msg">Please enter your city</div>
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="dob">
+          </div>
+        </div>
+        <div class="form-nav">
+          <span></span>
+          <button class="btn btn-primary" onclick="nextStep()">Next — Education</button>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="form-step" data-step="2">
+        <h2>Education</h2>
+        <p class="step-sub">Your academic background</p>
+        <div class="form-group">
+          <label>School / Institution <span class="required">*</span></label>
+          <input type="text" id="school" placeholder="e.g. Westside High School">
+          <div class="error-msg">Please enter your school name</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Grade / Year <span class="required">*</span></label>
+            <input type="text" id="grade" placeholder="e.g. Grade 11 or Senior">
+            <div class="error-msg">Please enter your grade or year</div>
+          </div>
+          <div class="form-group">
+            <label>GPA (optional)</label>
+            <input type="text" id="gpa" placeholder="e.g. 3.8 / 4.0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Subjects <span class="required">*</span></label>
+          <input type="text" id="subjects" placeholder="e.g. Math, English, Biology, History">
+          <div class="error-msg">Please list your subjects</div>
+        </div>
+        <div class="form-group">
+          <label>Languages Spoken</label>
+          <input type="text" id="languages" placeholder="e.g. English (fluent), Spanish (native)">
+        </div>
+        <div class="form-nav">
+          <button class="btn btn-ghost" onclick="prevStep()">Back</button>
+          <button class="btn btn-primary" onclick="nextStep()">Next — Skills</button>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="form-step" data-step="3">
+        <h2>Skills &amp; Activities</h2>
+        <p class="step-sub">What makes you stand out</p>
+        <div class="form-group">
+          <label>Technical Skills <span class="required">*</span></label>
+          <input type="text" id="techSkills" placeholder="e.g. Python, HTML, Excel, Canva">
+          <div class="error-msg">Please enter at least one skill</div>
+        </div>
+        <div class="form-group">
+          <label>Soft Skills</label>
+          <input type="text" id="softSkills" placeholder="e.g. Teamwork, Leadership, Communication">
+        </div>
+        <div class="form-group">
+          <label>Extracurricular Activities</label>
+          <input type="text" id="extracurriculars" placeholder="e.g. Debate Club, Soccer Team, Student Council">
+        </div>
+        <div class="form-group">
+          <label>Volunteer Work</label>
+          <input type="text" id="volunteer" placeholder="e.g. Beach clean-up, Library assistant">
+        </div>
+        <div class="form-group">
+          <label>Hobbies &amp; Interests</label>
+          <input type="text" id="hobbies" placeholder="e.g. Photography, Cycling, Reading">
+        </div>
+        <div class="form-nav">
+          <button class="btn btn-ghost" onclick="prevStep()">Back</button>
+          <button class="btn btn-primary" onclick="nextStep()">Next — Goals</button>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="form-step" data-step="4">
+        <h2>Goals &amp; Old CV</h2>
+        <p class="step-sub">What are you aiming for?</p>
+
+        <div class="form-group">
+          <label>Target Job / Internship / University <span class="required">*</span></label>
+          <input type="text" id="target" placeholder="e.g. Summer internship at a tech company or Computer Science at MIT">
+          <div class="error-msg">Please enter your target</div>
+        </div>
+        <div class="form-group">
+          <label>About Yourself (optional)</label>
+          <textarea id="about" rows="4" placeholder="Tell us a bit about yourself — your motivation, what drives you, what you're passionate about..."></textarea>
+          <div class="char-count"><span id="charCount">0</span> / 500</div>
+        </div>
+
+        <div class="form-group" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--gray-light)">
+          <label>Update from Old CV</label>
+          <p style="font-size:.8rem;color:var(--gray);margin-bottom:10px">Have an existing CV? Drop it here and Claude will update it with your new information.</p>
+          <div class="file-drop-zone" id="cvDropZone">
+            <div class="icon">&#128196;</div>
+            <p>Drop your old CV here or click to browse</p>
+            <p class="hint">Supports .txt, .docx, .pdf</p>
+            <input type="file" id="cvFileInput" accept=".txt,.text,.docx,.pdf">
+          </div>
+          <div class="file-status" id="cvFileStatus">
+            <span class="file-icon">&#128196;</span>
+            <span class="file-name" id="cvFileName"></span>
+            <button class="btn btn-primary btn-sm" onclick="parseOldCV()" id="parseBtn">Parse &amp; Fill Form</button>
+            <button class="btn btn-success btn-sm" onclick="regenerateFromOldCV()" id="regenBtn">Regenerate CV</button>
+            <button class="btn btn-danger btn-sm" onclick="removeOldCV()">Remove</button>
+          </div>
+          <div style="margin-top:8px;text-align:right">
+            <button class="btn btn-ghost btn-sm" id="togglePasteBtn" onclick="togglePasteOldCV()">Or paste content</button>
+          </div>
+          <div id="oldCvPasteWrap" style="display:none;margin-top:8px">
+            <textarea id="oldCvPaste" rows="5" placeholder="Paste your old CV content here..." style="width:100%;padding:10px 12px;border:1px solid var(--gray-light);border-radius:8px;font-size:.9rem;font-family:inherit;outline:none;resize:vertical;min-height:80px;transition:var(--transition)"></textarea>
+            <div style="text-align:right;margin-top:6px">
+              <button class="btn btn-primary btn-sm" onclick="parseOldCVPaste()">Parse &amp; Fill Form</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn btn-ghost" onclick="prevStep()">Back</button>
+          <button class="btn btn-primary" onclick="generateCV()">Generate CV with Claude</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: CV Preview -->
+  <div class="cv-panel">
+    <h2>Your CV</h2>
+    <p class="step-sub">Preview generated by Claude AI</p>
+
+    <div class="empty-state" id="emptyState">
+      <div class="icon">&#128221;</div>
+      <p>Fill in your details and click <strong>Generate CV</strong> to see your professional CV here.</p>
+    </div>
+
+    <div class="cv-preview" id="cvPreview">
+      <div class="tone-toggle">
+        <label>Style:</label>
+        <div class="tone-options">
+          <button class="tone-btn active" data-tone="Formal" onclick="setTone('Formal')">Formal</button>
+          <button class="tone-btn" data-tone="Friendly" onclick="setTone('Friendly')">Friendly</button>
+          <button class="tone-btn" data-tone="Creative" onclick="setTone('Creative')">Creative</button>
+        </div>
+      </div>
+      <div class="cv-header" id="cvHeader">
+        <div class="cv-header-photo" id="cvHeaderPhoto">
+          <span class="placeholder">&#128100;</span>
+          <img id="cvHeaderImg" alt="Photo">
+        </div>
+        <div class="cv-header-info">
+          <div class="cv-name" id="cvNameDisplay"></div>
+          <div class="cv-contact" id="cvContactDisplay"></div>
+        </div>
+      </div>
+      <div class="cv-content" id="cvContent"></div>
+      <div class="cv-actions">
+        <button class="btn btn-outline btn-sm" onclick="copyCV()">&#128203; Copy</button>
+        <button class="btn btn-success btn-sm" onclick="printCV()">&#128424; Print</button>
+        <button class="btn btn-primary btn-sm" onclick="generateCV()">&#128260; Regenerate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STEPS = 4;
+let currentStep = 1;
+let selectedTone = 'Formal';
+let lastFormData = null;
+let oldCvContent = '';
+
+// --- API Key ---
+const apiKeyInput = document.getElementById('apiKey');
+const apiStatusDot = document.getElementById('apiStatusDot');
+const apiStatusText = document.getElementById('apiStatusText');
+
+function updateApiStatus() {
+  const key = apiKeyInput.value.trim();
+  if (key) {
+    apiStatusDot.className = 'status-dot ok';
+    apiStatusText.textContent = 'Key saved';
+    localStorage.setItem('claude_api_key', key);
+  } else {
+    apiStatusDot.className = 'status-dot missing';
+    apiStatusText.textContent = 'Not set';
+    localStorage.removeItem('claude_api_key');
+  }
+}
+apiKeyInput.addEventListener('input', updateApiStatus);
+(function() {
+  const saved = localStorage.getItem('claude_api_key');
+  if (saved) { apiKeyInput.value = saved; updateApiStatus(); }
+})();
+
+function getApiKey() { return apiKeyInput.value.trim(); }
+
+// --- File protocol detection ---
+(function() {
+  if (location.protocol === 'file:') {
+    document.getElementById('fileWarning').classList.add('show');
+  }
+})();
+function copyServerCmd() {
+  var cmd = 'python -m http.server 8000';
+  navigator.clipboard.writeText(cmd).then(function() {
+    var btn = document.querySelector('.btn-copy-cmd');
+    var orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = orig; }, 2000);
+  }).catch(function() {});
+}
+
+// --- CORS Proxy ---
+function apiUrl() {
+  var direct = 'https://api.anthropic.com/v1/messages';
+  var proxy = document.getElementById('corsProxyToggle').checked;
+  if (proxy) {
+    return 'https://corsproxy.io/?' + encodeURIComponent(direct);
+  }
+  return direct;
+}
+
+(function() {
+  var cb = document.getElementById('corsProxyToggle');
+  var saved = localStorage.getItem('cors_proxy_enabled');
+  if (saved === 'true') cb.checked = true;
+  if (location.protocol === 'file:') {
+    cb.checked = true;
+    localStorage.setItem('cors_proxy_enabled', 'true');
+  }
+  cb.addEventListener('change', function() {
+    localStorage.setItem('cors_proxy_enabled', cb.checked ? 'true' : '');
+  });
+})();
+
+// --- Profile Picture ---
+const profilePicInput = document.getElementById('profilePicInput');
+const profilePicImg = document.getElementById('profilePicImg');
+const profilePicPreview = document.getElementById('profilePicPreview');
+const removePicBtn = document.getElementById('removePicBtn');
+const cvHeaderImg = document.getElementById('cvHeaderImg');
+const cvHeaderPhoto = document.getElementById('cvHeaderPhoto');
+let profilePicDataUrl = '';
+
+profilePicInput.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    profilePicDataUrl = ev.target.result;
+    profilePicImg.src = profilePicDataUrl;
+    profilePicImg.classList.add('loaded');
+    profilePicPreview.classList.add('has-img');
+    removePicBtn.style.display = '';
+    cvHeaderImg.src = profilePicDataUrl;
+    cvHeaderImg.classList.add('loaded');
+    cvHeaderPhoto.classList.add('has-img');
+    updateCvHeader();
+  };
+  reader.readAsDataURL(file);
+});
+
+function removeProfilePic() {
+  profilePicDataUrl = '';
+  profilePicInput.value = '';
+  profilePicImg.classList.remove('loaded');
+  profilePicImg.src = '';
+  profilePicPreview.classList.remove('has-img');
+  removePicBtn.style.display = 'none';
+  cvHeaderImg.classList.remove('loaded');
+  cvHeaderImg.src = '';
+  cvHeaderPhoto.classList.remove('has-img');
+}
+
+// --- Old CV Upload ---
+const cvDropZone = document.getElementById('cvDropZone');
+const cvFileInput = document.getElementById('cvFileInput');
+const cvFileStatus = document.getElementById('cvFileStatus');
+const cvFileName = document.getElementById('cvFileName');
+
+cvDropZone.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  this.classList.add('dragover');
+});
+cvDropZone.addEventListener('dragleave', function() {
+  this.classList.remove('dragover');
+});
+cvDropZone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  this.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleCvFile(file);
+});
+
+cvFileInput.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) handleCvFile(file);
+});
+
+function handleCvFile(file) {
+  var name = file.name.toLowerCase();
+  if (name.endsWith('.txt') || name.endsWith('.text')) {
+    var reader = new FileReader();
+    reader.onload = function(e) { onCvContentLoaded(e.target.result, file); };
+    reader.readAsText(file);
+  } else if (name.endsWith('.docx')) {
+    if (typeof mammoth === 'undefined') { showToast('DOCX library not loaded. Check your internet and try again.'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      mammoth.extractRawText({ arrayBuffer: e.target.result })
+        .then(function(result) { onCvContentLoaded(result.value, file); })
+        .catch(function() { showToast('Failed to read DOCX file.'); });
+    };
+    reader.readAsArrayBuffer(file);
+  } else if (name.endsWith('.pdf')) {
+    if (typeof pdfjsLib === 'undefined') { showToast('PDF library not loaded. Check your internet and try again.'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      pdfjsLib.getDocument({ data: e.target.result }).promise
+        .then(function(pdf) {
+          var total = pdf.numPages;
+          var texts = [];
+          function loadPage(n) {
+            if (n > total) { onCvContentLoaded(texts.join('\n'), file); return; }
+            pdf.getPage(n).then(function(page) {
+              page.getTextContent().then(function(tc) {
+                texts.push(tc.items.map(function(item) { return item.str; }).join(' '));
+                loadPage(n + 1);
+              });
+            });
+          }
+          loadPage(1);
+        })
+        .catch(function() { showToast('Failed to read PDF file.'); });
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    showToast('Please upload a .txt, .docx, or .pdf file.');
+  }
+}
+
+function onCvContentLoaded(text, file) {
+  oldCvContent = text;
+  cvFileName.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+  cvFileStatus.classList.add('show');
+  cvDropZone.style.display = 'none';
+  document.getElementById('oldCvPaste').value = '';
+  document.getElementById('oldCvPasteWrap').style.display = 'none';
+  showToast('Old CV loaded! Click "Parse & Fill Form" to auto-fill your details.');
+}
+
+function removeOldCV() {
+  oldCvContent = '';
+  cvFileInput.value = '';
+  cvFileStatus.classList.remove('show');
+  cvDropZone.style.display = '';
+}
+
+function togglePasteOldCV() {
+  const wrap = document.getElementById('oldCvPasteWrap');
+  const btn = document.getElementById('togglePasteBtn');
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block';
+    btn.textContent = 'Hide';
+    if (oldCvContent) { removeOldCV(); }
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('oldCvPaste').value = '';
+    btn.textContent = 'Or paste content';
+  }
+}
+
+document.getElementById('oldCvPaste').addEventListener('input', function() {
+  oldCvContent = this.value;
+  if (this.value && cvFileStatus.classList.contains('show')) {
+    removeOldCV();
+  }
+});
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+// --- Parse Old CV & Fill Form ---
+function showLoading(msg) {
+  document.getElementById('loadingText').textContent = msg;
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+function fillFormFromParsedData(text) {
+  var lines = text.split('\n');
+  var fieldMap = {};
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    var match = line.match(/^\[FIELD_(\w+)\]\s*(.*)$/);
+    if (match) {
+      fieldMap[match[1]] = match[2];
+    }
+  }
+
+  var fields = [
+    'fullName','email','phone','city','school','grade','gpa',
+    'subjects','languages','techSkills','softSkills','extracurriculars',
+    'volunteer','hobbies','target','about'
+  ];
+  for (var j = 0; j < fields.length; j++) {
+    var el = document.getElementById(fields[j]);
+    if (el && fieldMap[fields[j]] !== undefined) {
+      el.value = fieldMap[fields[j]];
+    }
+  }
+  if (fieldMap['dob']) {
+    var dobEl = document.getElementById('dob');
+    if (dobEl) dobEl.value = fieldMap['dob'];
+  }
+
+  document.getElementById('charCount').textContent = document.getElementById('about').value.length;
+  updateCvHeader();
+
+  currentStep = 1;
+  updateStepUI();
+  showToast('Form filled from your old CV! Review and make changes, then generate.');
+}
+
+async function parseOldCV() {
+  var content = oldCvContent.trim();
+  if (!content) {
+    showToast('No old CV content to parse.');
+    return;
+  }
+
+  var key = getApiKey();
+  if (!key) {
+    showToast('Please enter your Claude API key first.');
+    apiKeyInput.focus();
+    return;
+  }
+
+  showLoading('Claude is extracting your information...');
+
+  try {
+    var response = await fetch(apiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: 'You extract structured data from student CVs. Read the CV below and output each field on its own line using this exact format:\n[FIELD_fieldname]value\n\nDo not add any explanation, headers, or extra text. Only output the field lines.\n\nAvailable fields:\nfullName, email, phone, city, dob (YYYY-MM-DD format if found, otherwise leave empty), school, grade, gpa, subjects, languages, techSkills, softSkills, extracurriculars, volunteer, hobbies, target (the job/internship/university they are applying for), about (a short summary of who they are).\n\nIf a field is not found in the CV, output it with an empty value like:\n[FIELD_fullName]\n[FIELD_email]\n\nInclude EVERY field listed above in your output, even if empty.',
+        messages: [{ role: 'user', content: 'Extract information from this CV:\n\n' + content }]
+      })
+    });
+
+    if (!response.ok) {
+      var err = await response.text();
+      var msg = 'Failed to parse CV. Please try again.';
+      if (response.status === 401) msg = 'Invalid API key.';
+      else if (err) { try { var j = JSON.parse(err); msg = j.error?.message || msg; } catch(e) {} }
+      throw new Error(msg);
+    }
+
+    var result = await response.json();
+    var text = result.content?.[0]?.text || '';
+    if (!text) throw new Error('Empty response from Claude.');
+
+    fillFormFromParsedData(text);
+  } catch (err) {
+    showToast(err.message || 'Failed to parse old CV.');
+  } finally {
+    hideLoading();
+  }
+}
+
+function parseOldCVPaste() {
+  var val = document.getElementById('oldCvPaste').value.trim();
+  if (!val) { showToast('Paste your old CV content first.'); return; }
+  oldCvContent = val;
+  parseOldCV();
+}
+
+async function regenerateFromOldCV() {
+  var content = oldCvContent.trim();
+  if (!content) { showToast('Upload or paste your old CV first.'); return; }
+
+  var key = getApiKey();
+  if (!key) { showToast('Please enter your Claude API key first.'); apiKeyInput.focus(); return; }
+
+  showLoading('Claude is regenerating your CV...');
+
+  try {
+    // Step 1: Parse old CV → fill form
+    var parseResponse = await fetch(apiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: 'You extract structured data from student CVs. Read the CV below and output each field on its own line using this exact format:\n[FIELD_fieldname]value\n\nDo not add any explanation, headers, or extra text. Only output the field lines.\n\nAvailable fields:\nfullName, email, phone, city, dob (YYYY-MM-DD format if found, otherwise leave empty), school, grade, gpa, subjects, languages, techSkills, softSkills, extracurriculars, volunteer, hobbies, target (the job/internship/university they are applying for), about (a short summary of who they are).\n\nIf a field is not found in the CV, output it with an empty value like:\n[FIELD_fullName]\n[FIELD_email]\n\nInclude EVERY field listed above in your output, even if empty.',
+        messages: [{ role: 'user', content: 'Extract information from this CV:\n\n' + content }]
+      })
+    });
+
+    if (!parseResponse.ok) {
+      var errText = await parseResponse.text();
+      throw new Error(parseResponse.status === 401 ? 'Invalid API key.' : (JSON.parse(errText).error?.message || 'Parse failed.'));
+    }
+
+    var parseResult = await parseResponse.json();
+    var parseText = parseResult.content?.[0]?.text || '';
+    if (!parseText) throw new Error('Empty response from Claude.');
+
+    fillFormFromParsedData(parseText);
+
+    // Step 2: Auto-generate CV using the filled form + old CV context
+    await new Promise(function(r) { setTimeout(r, 300); });
+
+    showLoading('Writing your new CV...');
+
+    var data = gatherFormData();
+    lastFormData = data;
+    var prompt = buildPrompt(data, selectedTone, oldCvContent);
+
+    var genResponse = await fetch(apiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: 'You are an expert CV writer specializing in student CVs for first jobs, internships, and university applications. Write professional, honest, and encouraging CVs. Use clear sections with headers. Write in a confident but age-appropriate tone. Output plain text only — no markdown symbols like ** or ##.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!genResponse.ok) {
+      var genErr = await genResponse.text();
+      var genMsg = 'Generation failed.';
+      if (genErr) { try { genMsg = JSON.parse(genErr).error?.message || genMsg; } catch(e) {} }
+      throw new Error(genMsg);
+    }
+
+    var genResult = await genResponse.json();
+    var genText = genResult.content?.[0]?.text || '';
+    if (!genText) throw new Error('Empty CV generated.');
+
+    document.getElementById('emptyState').style.display = 'none';
+    var cvPreview = document.getElementById('cvPreview');
+    cvPreview.classList.add('active');
+    document.getElementById('cvContent').textContent = genText;
+    updateCvHeader();
+    showToast('CV regenerated successfully from your old CV!');
+  } catch (err) {
+    showToast(err.message || 'Failed to regenerate CV.');
+  } finally {
+    hideLoading();
+  }
+}
+
+// --- Steps ---
+function updateStepUI() {
+  const pct = ((currentStep - 1) / (STEPS - 1)) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  const labels = ['Personal Info', 'Education', 'Skills & Activities', 'Goals'];
+  document.getElementById('stepLabel').textContent = 'Step ' + currentStep + ' of ' + STEPS + ' \u2014 ' + labels[currentStep-1];
+  document.querySelectorAll('.form-step').forEach(function(el) {
+    el.classList.toggle('active', +el.dataset.step === currentStep);
+  });
+  document.querySelectorAll('.step-dot').forEach(function(el) {
+    var s = +el.dataset.step;
+    el.classList.toggle('active', s === currentStep);
+    el.classList.toggle('done', s < currentStep);
+  });
+}
+
+function validateStep(step) {
+  var groups = document.querySelectorAll('.form-step[data-step="' + step + '"] .form-group');
+  var valid = true;
+  groups.forEach(function(g) {
+    var input = g.querySelector('input, textarea');
+    var errorEl = g.querySelector('.error-msg');
+    if (!input || !errorEl) return;
+    g.classList.remove('invalid');
+    if (g.querySelector('.required')) {
+      if (!input.value.trim()) { g.classList.add('invalid'); valid = false; }
+    }
+    if (input.type === 'email' && input.value.trim()) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim())) { g.classList.add('invalid'); valid = false; }
+    }
+  });
+  return valid;
+}
+
+function nextStep() {
+  if (!validateStep(currentStep)) return;
+  if (currentStep < STEPS) { currentStep++; updateStepUI(); }
+}
+
+function prevStep() {
+  if (currentStep > 1) { currentStep--; updateStepUI(); }
+}
+
+// --- Character count ---
+document.getElementById('about').addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length;
+  if (this.value.length > 500) this.value = this.value.slice(0, 500);
+});
+
+// --- Update CV Header ---
+function updateCvHeader() {
+  var name = document.getElementById('fullName').value.trim() || 'Your Name';
+  document.getElementById('cvNameDisplay').textContent = name;
+
+  var parts = [];
+  var email = document.getElementById('email').value.trim();
+  var phone = document.getElementById('phone').value.trim();
+  var city = document.getElementById('city').value.trim();
+  if (email) parts.push(email);
+  if (phone) parts.push(phone);
+  if (city) parts.push(city);
+  document.getElementById('cvContactDisplay').textContent = parts.join('  |  ');
+}
+
+['fullName', 'email', 'phone', 'city'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', updateCvHeader);
+});
+
+// --- Tone ---
+function setTone(tone) {
+  selectedTone = tone;
+  document.querySelectorAll('.tone-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.tone === tone);
+  });
+  if (lastFormData) generateCV();
+}
+
+// --- Toast ---
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 4000);
+}
+
+// --- Gather form data ---
+function gatherFormData() {
+  return {
+    fullName: document.getElementById('fullName').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    city: document.getElementById('city').value.trim(),
+    dob: document.getElementById('dob').value,
+    school: document.getElementById('school').value.trim(),
+    grade: document.getElementById('grade').value.trim(),
+    gpa: document.getElementById('gpa').value.trim(),
+    subjects: document.getElementById('subjects').value.trim(),
+    languages: document.getElementById('languages').value.trim(),
+    techSkills: document.getElementById('techSkills').value.trim(),
+    softSkills: document.getElementById('softSkills').value.trim(),
+    extracurriculars: document.getElementById('extracurriculars').value.trim(),
+    volunteer: document.getElementById('volunteer').value.trim(),
+    hobbies: document.getElementById('hobbies').value.trim(),
+    target: document.getElementById('target').value.trim(),
+    about: document.getElementById('about').value.trim()
+  };
+}
+
+function buildPrompt(data, tone, oldCv) {
+  var toneGuide = {
+    Formal: 'Use a professional, formal tone. Write complete sentences. Be confident and polished.',
+    Friendly: 'Use a warm, approachable tone. Keep it professional but personable. Write as a capable student.',
+    Creative: 'Use an energetic, engaging tone. Highlight personality and potential. Be dynamic and inspiring.'
+  };
+
+  var prompt = 'Student CV Information:\n\n';
+  prompt += 'Personal Info\nFull Name: ' + data.fullName + '\nEmail: ' + data.email + '\nPhone: ' + data.phone + '\nCity: ' + data.city;
+  prompt += '\nDate of Birth: ' + (data.dob || 'Not provided');
+  prompt += '\n\nEducation\nSchool: ' + data.school + '\nGrade/Year: ' + data.grade + '\nGPA: ' + (data.gpa || 'Not provided');
+  prompt += '\nSubjects: ' + data.subjects + '\nLanguages: ' + (data.languages || 'Not provided');
+  prompt += '\n\nSkills & Activities\nTechnical Skills: ' + data.techSkills + '\nSoft Skills: ' + (data.softSkills || 'Not provided');
+  prompt += '\nExtracurricular Activities: ' + (data.extracurriculars || 'Not provided');
+  prompt += '\nVolunteer Work: ' + (data.volunteer || 'Not provided');
+  prompt += '\nHobbies & Interests: ' + (data.hobbies || 'Not provided');
+  prompt += '\n\nGoals\nTarget: ' + data.target + '\nAbout the student: ' + (data.about || 'Not provided');
+  prompt += '\n\nTone instruction: ' + toneGuide[tone];
+
+  if (oldCv && oldCv.trim()) {
+    prompt += '\n\nThe student already has an existing CV that they want to update and improve. Please use the following old CV as a base, incorporate the new information above, and produce an updated, improved version:\n\n--- BEGIN OLD CV ---\n' + oldCv.trim() + '\n--- END OLD CV ---';
+  } else {
+    prompt += '\n\nPlease write a complete CV for this student. Use clear section headers (like "Education", "Skills", etc.). Do not use markdown formatting like ** or ##. Write in plain text with section headers in capital letters or with a colon.';
+  }
+  return prompt;
+}
+
+// --- Generate ---
+async function generateCV() {
+  if (currentStep === 4 && !validateStep(4)) return;
+
+  var data = gatherFormData();
+
+  var requiredIds = ['fullName','email','phone','city','school','grade','subjects','techSkills','target'];
+  var missing = false;
+  for (var i = 0; i < requiredIds.length; i++) {
+    if (!document.getElementById(requiredIds[i]).value.trim()) { missing = true; break; }
+  }
+  if (missing) {
+    for (var s = 1; s <= STEPS; s++) {
+      var stepEl = document.querySelector('.form-step[data-step="' + s + '"]');
+      var inputs = stepEl.querySelectorAll('input');
+      var empty = false;
+      for (var j = 0; j < inputs.length; j++) {
+        if (inputs[j].id && requiredIds.indexOf(inputs[j].id) !== -1 && !inputs[j].value.trim()) { empty = true; break; }
+      }
+      if (empty) { currentStep = s; updateStepUI(); break; }
+    }
+    showToast('Please fill in all required fields before generating.');
+    return;
+  }
+
+  var key = getApiKey();
+  if (!key) {
+    showToast('Please enter your Claude API key at the top of the page.');
+    apiKeyInput.focus();
+    return;
+  }
+
+  lastFormData = data;
+  showLoading('Claude is writing your CV...');
+
+  try {
+    var prompt = buildPrompt(data, selectedTone, oldCvContent);
+    var response = await fetch(apiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: 'You are an expert CV writer specializing in student CVs for first jobs, internships, and university applications. Write professional, honest, and encouraging CVs. Use clear sections with headers. Write in a confident but age-appropriate tone. Output plain text only — no markdown symbols like ** or ##.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      var err = await response.text();
+      var msg = 'Something went wrong. Please try again.';
+      if (response.status === 401) msg = 'Invalid API key. Please check your Claude API key.';
+      else if (response.status === 429) msg = 'Rate limit reached. Please wait a moment and try again.';
+      else if (err) { try { var j = JSON.parse(err); msg = j.error?.message || msg; } catch(e) {} }
+      throw new Error(msg);
+    }
+
+    var result = await response.json();
+    var text = result.content?.[0]?.text || '';
+
+    document.getElementById('emptyState').style.display = 'none';
+    var cvPreview = document.getElementById('cvPreview');
+    cvPreview.classList.add('active');
+    document.getElementById('cvContent').textContent = text;
+    updateCvHeader();
+  } catch (err) {
+    showToast(err.message || 'Failed to generate CV. Please try again.');
+  } finally {
+    hideLoading();
+  }
+}
+
+// --- Copy ---
+function copyCV() {
+  var text = document.getElementById('cvContent').textContent;
+  if (!text) return;
+  var name = document.getElementById('fullName').value.trim() || 'CV';
+  var full = name + '\n' + document.getElementById('cvContactDisplay').textContent + '\n\n' + text;
+  navigator.clipboard.writeText(full).then(function() { showToast('CV copied to clipboard!'); }).catch(function() { showToast('Failed to copy.'); });
+}
+
+// --- Print ---
+function printCV() { window.print(); }
+
+// Keyboard shortcut
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+    var btn = document.querySelector('.form-step.active .btn-primary');
+    if (btn) btn.click();
+  }
+});
+</script>
+</body>
+</html>
